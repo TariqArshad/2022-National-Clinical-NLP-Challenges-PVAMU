@@ -13,7 +13,7 @@
 
     *If punkt & stopwords not downloaded from nltk, uncomment lines 2 & 3 in CMED_preprocessing
    
-##Abstract
+## Abstract
 Attention-based models have become the leading
 approach in modeling medical language for Natural Language
 Processing (NLP) in clinical notes. These models outperform
@@ -42,17 +42,17 @@ that models pre-trained on clinical data are more effective in
 detecting medication and medication events, but Bert Base, pretrained on general domain data showed to be the most effective
 for classifying the context of events related to medications. 
 
-####Bert variants Huggingface links
+#### Bert variants Huggingface links
     - "bert-base-cased"
     - "dmis-lab/biobert-bert-cased-v1.2"
     - "emilyalsentzer/Bio_ClinicalBERT"
     - "emilyalsentzer/Bio_Discharge_Summary_BERT"
 
-##Task 1 Test Results
+## Task 1 Test Results
 
 ![](figures/Task 1 Results.png)
 
-##Task 2 Test Results
+## Task 2 Test Results
 ![](figures/Task 2 Results.png)
 
 *NOTE: Contextulaized Medication Event Dataset not publicly available and must be requested from https://n2c2.dbmi.hms.harvard.edu/

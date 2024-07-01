@@ -48,12 +48,23 @@ for classifying the context of events related to medications.
     - "emilyalsentzer/Bio_ClinicalBERT"
     - "emilyalsentzer/Bio_Discharge_Summary_BERT"
 
-## Task 1 Test Results
 
-![](figures/Task 1 Results.png)
+#### Contextualized Medication Event Dataset File Structure
+    CMED/ 
+        train,
+        eval,
+        train_plus_eval,
+        test
+
+## Task 1 Test Results
+<p align="center">
+  <img src="figures/Task 1 Results.png" />
+</p>
 
 ## Task 2 Test Results
-![](figures/Task 2 Results.png)
+<p align="center">
+  <img src="figures/Task 2 Results.png" />
+</p>
 
 *NOTE: Contextulaized Medication Event Dataset not publicly available and must be requested from https://n2c2.dbmi.hms.harvard.edu/
 

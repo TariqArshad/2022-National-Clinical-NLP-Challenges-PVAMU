@@ -1,11 +1,10 @@
 import pickle
 import nltk
-#nltk.download('punkt')
-#nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('stopwords')
 import os
 import numpy as np
 import string
-import tensorflow as tf
 import torch
 import transformers
 from transformers import AutoTokenizer
@@ -260,47 +259,4 @@ def Generate_cmed_data(Data_dir = str, Output_dir = "", tag = True,wordpiece_tok
                 cmed_data_dict[key].extend(Embedding_dict[key]);
     return cmed_data_dict;
 
-def main():
-    current_dir = os.getcwd();
-    current_dir = current_dir.replace("\\", "/");
-    Data_dir = current_dir + "/CMED/";
-    Training_data_dir = Data_dir + "train/";
-    Test_data_dir = Data_dir + "test/";
 
-
-    Test_data_path = Test_data_dir + "279-02.txt"
-    Ann_data_path = Test_data_dir + "279-02.ann";
-
-    Parsed_Ann = Parse_Annotation(filepath=Ann_data_path);
-    Tokenized_EHR = Tokenize_EHR(file_path=Test_data_path,Ann = Parsed_Ann);
-    EHR_Embedding_dict = EHR_Embedding(Tokenized_EHR);
-
-
-    test_tsv_filepath = "CMED_Test.tsv"
-    train_tsv_filepath = "CMED_Train.tsv"
-    test_pickle_filepath = "CMED_Test.pkl";
-    train_pickle_filepath = "CMED_Train.pkl"
-
-    EHR_taggedfile = open(test_tsv_filepath, "w");
-    EHR_taggedfile.close();
-
-    EHR_taggedfile = open(train_tsv_filepath, "w");
-    EHR_taggedfile.close();
-
-
-    train_data_dict = Generate_cmed_data(Data_dir=Training_data_dir, wordpiece_tokenizer=AutoTokenizer.from_pretrained("dmis-lab/biobert-base-cased-v1.2"), tsv_filepath=train_tsv_filepath);
-    test_data_dict = Generate_cmed_data(Data_dir=Test_data_dir, wordpiece_tokenizer=AutoTokenizer.from_pretrained("dmis-lab/biobert-base-cased-v1.2"), tsv_filepath=test_tsv_filepath);
-
-    with open(test_pickle_filepath, "wb") as test_pickle:
-        pickle.dump(test_data_dict, test_pickle);
-    with open(train_pickle_filepath, "wb") as train_pickle:
-        pickle.dump(train_data_dict, train_pickle);
-    print("Data Generated!!!")
-
-    return 0;
-
-
-
-
-if __name__ == '__main__':
-    main()

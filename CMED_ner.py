@@ -10,6 +10,7 @@ from sklearn import metrics
 import numpy as np
 import pickle
 import os
+import argparse
 
 import CMED_preprocessing
 import CMED_Modeling_PT
@@ -18,39 +19,73 @@ import CMED_postprocessing
 from eval_script import Corpora
 from eval_script import evaluate
 
+def Parse_Args():
+    parser = argparse.ArgumentParser();
+    parser.add_argument("--encoder_link", type=str, default = "emilyalsentzer/Bio_ClinicalBERT");
+    parser.add_argument("--task", type=int,choices = [1, 2] , default = 1);
+    parser.add_argument("--generate_data",choices = ["True", "False"] , default = "True");
+    parser.add_argument("--train_on_eval", choices = ["True", "False"], default = "False");
+    parser.add_argument("--train", choices = ["True", "False"], default = "True");
+    parser.add_argument("--eval", choices = ["True", "False"], default = "True");
+    parser.add_argument("--test", choices = ["True", "False"], default = "True");
+    parser.add_argument("--continue_training", choices = ["True", "False"], default = "False");
+    parser.add_argument("--train_debug", choices=["True", "False"], default = "False");
+    parser.add_argument("--data_dir", type=str, default = "CMED/");
+    parser.add_argument("--max_seq_length", type=int, default = 512);
+    parser.add_argument("--num_train_epochs", type=int, default = 10);
+    parser.add_argument("--batch_sz", type=int, default = 32);
+    parser.add_argument("--lowercase", choices = ["True", "False"], default = "True");
+    args = parser.parse_args();
+    return args;
 
-def main():
-    #Model encoder links
+def main(args):
+    """
+    Encoder Link Examples:
     Transformer_Encoder_Link = "bert-base-cased"
-    #Transformer_Encoder_Link = "dmis-lab/biobert-bert-cased-v1.2";
-    #Transformer_Encoder_Link = "emilyalsentzer/Bio_ClinicalBERT";
-    #Transformer_Encoder_Link = "emilyalsentzer/Bio_Discharge_Summary_BERT";
-    #Transformer_Encoder_Link = "Charagan/MedBERT";
-
-
+    Transformer_Encoder_Link = "dmis-lab/biobert-bert-cased-v1.2"
+    Transformer_Encoder_Link = "emilyalsentzer/Bio_ClinicalBERT"
+    Transformer_Encoder_Link = "emilyalsentzer/Bio_Discharge_Summary_BERT"
+    """
+    Transformer_Encoder_Link = args.encoder_link;
     #Flag using for now to select which task to do from n2c2 Track 1(Task 1: Drug Detection, Task 2: Drug Event CLassification)
-    #True = Task1 , False = Task2
-    TASK_FLAG = True;
+    #1 = Task1 , 2 = Task2
+    TASK_FLAG = args.task
 
-    GENERATE_DATA_FLAG = False;
-    TRAIN_FLAG = False;
-    TRAIN_PLUS_EVAL_FLAG = True;
-    TRAIN_Continue = False;
-    TRAIN_Debug = False;
-    EVAL_FLAG = False;
-    TEST_FLAG = True;
-    PREDICT_FLAG = False;
+    if args.generate_data == "True": GENERATE_DATA_FLAG = True;
+    else: GENERATE_DATA_FLAG = False;
+
+    if args.train == "True": TRAIN_FLAG = True;
+    else: TRAIN_FLAG = False;
+
+    if args.train_on_eval == "True": TRAIN_PLUS_EVAL_FLAG = True;
+    else: TRAIN_PLUS_EVAL_FLAG = False;
+
+    if args.continue_training == "True": TRAIN_Continue = True;
+    else: TRAIN_Continue = False;
+    
+    if args.train_debug == "True":TRAIN_Debug = True;
+    else: TRAIN_Debug = False;
+    
+    if args.eval == "True":EVAL_FLAG = True;
+    else: EVAL_FLAG = False;
+    
+    if args.test == "True":TEST_FLAG = True
+    else: TEST_FLAG = False;
+
+    if args.lowercase == "True": lowercase = True;
+    else: lowercase = False;
+    #PREDICT_FLAG = args.predict;
 
     current_dir = os.getcwd();
 
     current_dir = current_dir.replace("\\", "/");
-    Data_dir = current_dir + "/CMED/";
+    Data_dir = args.data_dir;
     Training_data_dir = Data_dir + "train/";
     Eval_data_dir = Data_dir + "eval/";
     Test_data_dir = Data_dir + "test/";
     Trainpluseval_data_dir = Data_dir + "train_plus_eval/";
 
-    if TASK_FLAG:
+    if TASK_FLAG == 1:
         train_tsv_filepath = "CMED_Train_T1.tsv";
         eval_tsv_filepath = "CMED_Eval_T1.tsv";
         test_tsv_filepath = "CMED_Test_T1.tsv";
@@ -69,9 +104,9 @@ def main():
                 "INoDisposition": ("I-Drug"), "Undetermined": ("B-Drug"), "IUndetermined": ("I-Drug"),
                 "Outside": ("O")};
         
-        Tags = ["B-Drug", "I-Drug", "O"];
+        tags = ["B-Drug", "I-Drug", "O"];
 
-    else:
+    elif TASK_FLAG == 2:
         train_tsv_filepath = "CMED_Train_T2.tsv";
         eval_tsv_filepath = "CMED_Eval_T2.tsv";
         test_tsv_filepath = "CMED_Test_T2.tsv";
@@ -90,11 +125,12 @@ def main():
                 "INoDisposition": ("I-NoDisposition"), "Undetermined": ("B-Undetermined"),
                 "IUndetermined": ("I-Undetermined"), "Outside": ("O")};
         
-        Tags = ["B-Disposition", "I-Disposition","B-NoDisposition" ,"I-NoDisposition" ,"B-Undetermined","I-Undetermined" ,  "O"]
+        tags = ["B-Disposition", "I-Disposition","B-NoDisposition" ,"I-NoDisposition" ,"B-Undetermined","I-Undetermined" ,  "O"]
 
 
-    Max_Embedding_length = 512;
-    Train_Epochs = 10;
+    Max_Embedding_length = args.max_seq_length;
+    Train_Epochs = args.num_train_epochs;
+    batch_sz = args.batch_sz
     bert_tokenizer = transformers.AutoTokenizer.from_pretrained(Transformer_Encoder_Link);
     bert_model = transformers.AutoModel.from_pretrained(Transformer_Encoder_Link);
 
@@ -129,35 +165,32 @@ def main():
             Train_CMED_dict = torch.load(train_torch_file);
 
 
-        train_dataloader = CMED_Modeling_PT.CMED_PT_Dataset(torch.tensor(Train_CMED_dict["input_ids"]), Train_CMED_dict["Wordpiece Tags"], batch_sz=32);
+        train_dataloader = CMED_Modeling_PT.CMED_PT_Dataset(torch.tensor(Train_CMED_dict["input_ids"]), Train_CMED_dict["Wordpiece Tags"], batch_sz=batch_sz);
         Model = CMED_Model(bert_model=bert_model, Task = TASK_FLAG);
-        Model = torch.nn.DataParallel(Model, device_ids=[0, 1, 2, 3]);
         Model = Model.to(device);
         if TRAIN_Continue: 
             Model = torch.load(Model_Path);
-        Model, Train_History = CMED_Modeling_PT.Train_Model(train_dataloader=train_dataloader, model=Model ,Num_Epochs=Train_Epochs,Device=device, Model_Path = Model_Path,History_Path = Train_History_Path , debug=TRAIN_Debug, Tags = Tags);
+        Model, Train_History = CMED_Modeling_PT.Train_Model(train_dataloader=train_dataloader, model=Model ,Num_Epochs=Train_Epochs,Device=device, Model_Path = Model_Path, debug=TRAIN_Debug, tags = tags, bert_tokenizer = bert_tokenizer);
 
     if EVAL_FLAG:
         Eval_CMED_dict = torch.load(eval_torch_file);
-        eval_dataloader = CMED_Modeling_PT.CMED_PT_Dataset(torch.tensor(Eval_CMED_dict["input_ids"]), Eval_CMED_dict["Wordpiece Tags"], batch_sz=32);
+        eval_dataloader = CMED_Modeling_PT.CMED_PT_Dataset(torch.tensor(Eval_CMED_dict["input_ids"]), Eval_CMED_dict["Wordpiece Tags"], batch_sz=batch_sz);
         Model = CMED_Model(bert_model=bert_model, Task = TASK_FLAG);
-        Model = torch.nn.DataParallel(Model, device_ids=[0, 1, 2, 3]);
         Model = Model.to(device);
         Model = torch.load(Model_Path);
-        CMED_Modeling_PT.Eval_Model(eval_dataloader=eval_dataloader,model=Model, Device=device, Tags = Tags);
+        CMED_Modeling_PT.Eval_Model(eval_dataloader=eval_dataloader,model=Model, Device=device, tags = tags, bert_tokenizer = bert_tokenizer);
 
     if TEST_FLAG:
         Test_CMED_dict = torch.load(test_torch_file);
         #test_dataloader = CMED_Modeling_PT.CMED_PT_Dataset(torch.tensor(Test_CMED_dict["input_ids"]), Test_CMED_dict["Wordpiece Tags"], batch_sz=32);
         Model = CMED_Model(bert_model=bert_model, Task = TASK_FLAG);
-        Model = torch.nn.DataParallel(Model, device_ids=[0, 1, 2, 3]);
         Model = Model.to(device);
         Model = torch.load(Model_Path);
 
         True_wordpiece_tags = " ".join(Test_CMED_dict["Wordpiece Tags"]);
         True_wordpiece_tags = True_wordpiece_tags.split(" ");
 
-        wordpieces, ner_tags = CMED_Modeling_PT.Test_Model(test_xdata=torch.tensor(Test_CMED_dict["input_ids"]), test_xdata_wordpieces = Test_CMED_dict["Wordpiece Tokens"],model=Model,tags = Tags ,Device=device);
+        wordpieces, ner_tags = CMED_Modeling_PT.Test_Model(test_xdata=torch.tensor(Test_CMED_dict["input_ids"]), test_xdata_wordpieces = Test_CMED_dict["Wordpiece Tokens"],model=Model,tags = tags ,Device=device, bert_tokenizer = bert_tokenizer);
 
         predict_df_wp = pd.DataFrame([wordpieces, ner_tags, True_wordpiece_tags]);
 
@@ -183,35 +216,17 @@ def main():
             if output_dir.replace("/", "") not in dir_list:
                 os.mkdir(output_dir.replace("/", ""));
 
-        labels = Tags.remove("O");
-        CMED_postprocessing.Create_predict_annotation(Test_data_dir, words, ner_tags, output_dir, lowercase = True, Labels = labels, task = TASK_FLAG);
+        labels = tags.remove("O");
+        CMED_postprocessing.Create_predict_annotation(Test_data_dir, words, ner_tags, output_dir, lowercase = lowercase, Labels = labels, task = TASK_FLAG);
 
         corpora = Corpora(Test_data_dir, output_dir);
         if corpora.docs:
             evaluate(corpora, verbose=False);
-        
-
-    if PREDICT_FLAG:
-        predict_input = "The patient is on Codine for medication";
-        bert_model = transformers.AutoModel.from_pretrained(Transformer_Encoder_Link);
-        Model = CMED_Model(bert_model=bert_model, Task = TASK_FLAG);
-        Model = torch.load(Model_Path);
-        Model = Model.to(device);
-
-        words, tags = CMED_Modeling_PT.Model_predict(input=predict_input, bert_tokenizer=bert_tokenizer, model=Model,
-                                                     Device=device);
-        predict_df = pd.DataFrame([words, tags]);
-        predict_df = predict_df.transpose();
-        predict_df.to_csv("CMED_wordpiece_predict.tsv", header=None, index=False, sep="\t")
-
-        words, tags = CMED_postprocessing.wordpiece_detokenize(words, tags);
-        predict_df = pd.DataFrame([words, tags]);
-        predict_df = predict_df.transpose();
-        predict_df.to_csv("CMED_predict.tsv", header=None, index=False, sep="\t");
 
     return 0;
 
 
 if __name__ == '__main__':
-    main();
+    args = Parse_Args();
+    main(args);
 

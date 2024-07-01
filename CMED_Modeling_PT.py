@@ -13,12 +13,12 @@ from eval_script import Corpora
 from eval_script import evaluate
 
 class CMED_Model(torch.nn.Module):
-    def __init__(self, bert_model,Task = True):
+    def __init__(self, bert_model,Task = 1):
         super(CMED_Model, self).__init__()
         self.encoder = bert_model;
         self.feedforward_L1 = torch.nn.Linear(768, 256);
-        if Task: self.output_layer_last_ff = torch.nn.Linear(256, 3);
-        else: self.output_layer_last_ff = torch.nn.Linear(256, 7);
+        if Task == 1: self.output_layer_last_ff = torch.nn.Linear(256, 3);
+        elif Task == 2: self.output_layer_last_ff = torch.nn.Linear(256, 7);
     def forward(self, input_ids):
         bert_output = self.encoder(input_ids = input_ids);
         logits = self.feedforward_L1(bert_output["last_hidden_state"]);
@@ -60,7 +60,7 @@ def Train_Model(train_dataloader, bert_tokenizer, model = torch.nn.Module(),Num_
 
     while training:
         epoch += 1;
-        history[epoch] = {"Batch Loss": [],  "Avg Batch loss": []};
+        history[epoch] = {"Batch Loss": [],  "Avg Batch Loss": []};
         print("Epoch", str(epoch), "-------------------------------------------------------");
         Avg_loss_temp_list = [];
         epoch_step = 0;
@@ -110,7 +110,7 @@ def Train_Model(train_dataloader, bert_tokenizer, model = torch.nn.Module(),Num_
 
             history[epoch]["Batch Loss"].append(loss.item());
             Avg_Batch_Loss = np.average(history[epoch]["Batch Loss"]);
-            history[epoch]["Average Batch Loss"].append(Avg_Batch_Loss);
+            history[epoch]["Avg Batch Loss"].append(Avg_Batch_Loss);
 
             print("Epoch Percentage: ", str(np.round((epoch_step/Num_batches)*100, decimals = 2)));
             print("Avg Loss: ", str(np.round(Avg_Batch_Loss, decimals=8)));
@@ -206,7 +206,7 @@ def Test_Model(test_xdata,test_xdata_wordpieces ,model = torch.nn.Module() ,bert
         logits = model(model_input);
         logits = logits.reshape((logits.shape[0] * logits.shape[1], -1));
 
-        softmax = torch.nn.LogSoftmax();
+        softmax = torch.nn.LogSoftmax(dim=0);
         probs = softmax(logits);
 
         predictions = torch.argmax(probs, dim=1);
@@ -259,54 +259,3 @@ def Model_predict(input = [],model = torch.nn.Module() ,bert_tokenizer = transfo
         words_list.extend(list(words));
 
     return words_list, predictions_list;
-
-def main():
-    with open( "CMED_Train.pkl", "rb") as Train_pickle:
-        Train_CMED_dict = pickle.load(Train_pickle);
-
-    with open("CMED_Test.pkl", "rb") as Test_pickle:
-        Test_CMED_dict = pickle.load(Test_pickle);
-
-    device = torch.device("cuda:0");
-
-    train_dataloader = CMED_PT_Dataset(Train_CMED_dict["Wordpiece Tokens"], Train_CMED_dict["Wordpiece Tags"], batch_sz=32);
-    test_dataloader = CMED_PT_Dataset(Test_CMED_dict["Wordpiece Tokens"], Test_CMED_dict["Wordpiece Tags"], batch_sz= 128);
-    predict_input = Test_CMED_dict["Wordpiece Tokens"];
-    #predict_dataloader = CMED_PT_Dataset(Test_CMED_dict["Wordpiece Tokens"][:1000], Test_CMED_dict["Wordpiece Tags"][:1000], batch_sz=32)
-
-    bert_model = transformers.AutoModel.from_pretrained("dmis-lab/biobert-base-cased-v1.2");
-
-    Model = CMED_Model(bert_model=bert_model);
-
-    bert_tokenizer = transformers.AutoTokenizer.from_pretrained("dmis-lab/biobert-base-cased-v1.2");
-
-    #Model = torch.load("CMED_Biobert_Model.pt");
-    Model = Model.to(device);
-    #Model = torch.nn.DataParallel(Model, device_ids=[0,1,2,3]).to(device);
-
-
-    #Model = Train_Model(train_dataloader=train_dataloader, bert_tokenizer=bert_tokenizer, model=Model, Device = device);
-    #Eval_Model(eval_dataloader =  test_dataloader, bert_tokenizer=bert_tokenizer, model=Model, Device=device);
-    words, tags = Model_predict(input = predict_input, bert_tokenizer=bert_tokenizer, model = Model, Device=device);
-    predict_df = pd.DataFrame([words, tags]);
-    predict_df = predict_df.transpose();
-    predict_df.to_csv("CMED_wordpiece_predict.tsv",header=None, index=False, sep="\t")
-
-    words, tags = CMED_postprocessing.wordpiece_detokenize(words, tags);
-    predict_df = pd.DataFrame([words, tags]);
-    predict_df = predict_df.transpose();
-    predict_df.to_csv("CMED_predict.tsv",header=None, index=False, sep="\t");
-
-    test_data_dir = "CMED/test/";
-    output_dir = "ann_predict/";
-    CMED_postprocessing.Create_predict_annotation(test_data_dir, words, tags, output_dir, lowercase=True);
-
-    corpora = Corpora(test_data_dir, output_dir);
-    if corpora.docs:
-        evaluate(corpora, verbose = False);
-
-
-    return 0;
-
-if __name__ == '__main__':
-    main();

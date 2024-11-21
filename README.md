@@ -1,6 +1,6 @@
 # Electronic Health Record Modeling With Large Language Models For Medication Event Extraction
 
-## How to run(Tested in Python 3.9)
+## How to run
     
     CMED_ner.py
         --encoder_link bert-base-uncased

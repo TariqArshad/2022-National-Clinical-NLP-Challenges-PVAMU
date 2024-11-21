@@ -42,19 +42,12 @@ that models pre-trained on clinical data are more effective in
 detecting medication and medication events, but Bert Base, pretrained on general domain data showed to be the most effective
 for classifying the context of events related to medications. 
 
-#### Bert variants Huggingface links
+#### Model links for importing directly from HuggingFace
     - "bert-base-cased"
     - "dmis-lab/biobert-bert-cased-v1.2"
     - "emilyalsentzer/Bio_ClinicalBERT"
     - "emilyalsentzer/Bio_Discharge_Summary_BERT"
 
-
-#### Contextualized Medication Event Dataset File Structure
-    CMED/ 
-        train,
-        eval,
-        train_plus_eval,
-        test
 
 ## Task 1 Test Results
 <p align="center">
@@ -67,5 +60,3 @@ for classifying the context of events related to medications.
 </p>
 
 *NOTE: Contextulaized Medication Event Dataset not publicly available and must be requested from https://n2c2.dbmi.hms.harvard.edu/
-
--TODO: add in inference code
